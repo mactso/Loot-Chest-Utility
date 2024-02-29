@@ -1,0 +1,25 @@
+modLoader="javafml"
+loaderVersion="[48,)"
+license="MIT License"
+[[mods]]
+modId="lootcontrolutility"
+version="${file.jarVersion}"
+displayName="Loot Control Utility Mod"
+displayURL="https://www.curseforge.com/minecraft/mc-mods/lootcontrolutility"
+logoFile="Logo.png"
+authors="MacTso, Lupicus"
+description='Loot Control Utility Mod.'
+[[dependencies.harderfarther]]
+    modId="forge"
+    mandatory=true
+    versionRange="[48,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.lootcontrolutility]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.2,1.21)"
+    ordering="NONE"
+    side="BOTH"
+
