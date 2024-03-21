@@ -9,7 +9,7 @@ displayURL="https://www.curseforge.com/minecraft/mc-mods/lootcontrolutility"
 logoFile="Logo.png"
 authors="MacTso, Lupicus"
 description='Loot Control Utility Mod.'
-[[dependencies.harderfarther]]
+[[dependencies.lootcontrolutilty]]
     modId="forge"
     mandatory=true
     versionRange="[48,)"

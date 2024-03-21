@@ -7,7 +7,7 @@ import net.minecraft.world.entity.LivingEntity;
 
 public class LocalCoreCalls implements IHarderFartherCoreProxy {
 
-	BlockPos CENTER = BlockPos.containing(0,128,0);
+	public static BlockPos CENTER = BlockPos.containing(0,64,0);
 	
 	public float getDifficulty (LivingEntity le) {
 		return 0.0f;

@@ -1,11 +1,9 @@
 package com.mactso.lootchestutility.manager;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Hashtable;
-
-
-import net.minecraft.util.RandomSource;
 import java.util.StringTokenizer;
 
 import org.apache.logging.log4j.LogManager;
@@ -19,7 +17,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
-
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -42,6 +40,19 @@ public class LootManager {
 
 	public static Hashtable<Integer, LootItem> lootHashtable = new Hashtable<>();
 	public static boolean init = false;
+	
+	static {
+		initReports();
+	}
+	
+	public static void initReports() {
+		File fd = new File("config/lootcontrolutility");
+		if (!fd.exists())
+			fd.mkdir();
+		File fb = new File("config/spawnbalanceutility/loottables.txt");
+		if (fb.exists())
+			fb.delete();
+	}
 	
 	public static ItemStack getLootItem (String Rarity, RandomSource rand) {
 
@@ -89,6 +100,9 @@ public class LootManager {
 		}
 		return lootList;
 	}
+	
+	
+
 	public static void init(String [] lootItems) {
 
 		lootHashtable.clear();

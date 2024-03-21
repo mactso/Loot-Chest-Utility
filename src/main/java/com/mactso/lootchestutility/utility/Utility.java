@@ -1,6 +1,16 @@
 package com.mactso.lootchestutility.utility;
 
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -10,8 +20,11 @@ import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import net.minecraft.ChatFormatting;
-
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -19,7 +32,9 @@ import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
@@ -31,9 +46,12 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap.Types;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.storage.loot.LootDataManager;
+import net.minecraft.world.level.storage.loot.LootDataType;
+import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 
 public class Utility {
@@ -59,6 +77,25 @@ public class Utility {
 
 	private static final Logger LOGGER = LogManager.getLogger();
 
+	public static void initReports() {
+		File fd = new File("config/lootcontrolutility");
+		if (!fd.exists())
+			fd.mkdir();
+		File fb = new File("config/lootcontrolutility/Biomes.rpt");
+		if (fb.exists())
+			fb.delete();
+		
+		File fbt = new File("config/lootcontrolutility/BiomeTags.rpt");
+		if (fbt.exists())
+			fbt.delete();
+
+		File fbl = new File("config/lootcontrolutility/LootTables.rpt");
+		if (fbl.exists())
+			fbl.delete();
+
+	}
+	
+	
 	public static void debugMsg(int level, String dMsg) {
 
 		if (MyConfig.getDebugLevel() > level - 1) {
@@ -68,22 +105,18 @@ public class Utility {
 	}
 
 	public static void debugMsg(int level, BlockPos pos, String dMsg) {
-
 		if (MyConfig.getDebugLevel() > level - 1) {
 			LOGGER.info("L" + level + " (" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + "): " + dMsg);
 		}
-
 	}
 
 	public static void debugMsg(int level, LivingEntity le, String dMsg) {
-
 		if (MyConfig.getDebugLevel() > level - 1) {
 			LOGGER.info("L" + level + " (" 
 					+ le.blockPosition().getX() + "," 
 					+ le.blockPosition().getY() + ","
 					+ le.blockPosition().getZ() + "): " + dMsg);
 		}
-
 	}
 
 	public static void sendBoldChat(Player p, String chatMessage, ChatFormatting textColor) {
@@ -91,15 +124,12 @@ public class Utility {
 		component.setStyle(component.getStyle().withBold(true));
 		component.setStyle(component.getStyle().withColor(textColor));
 		p.sendSystemMessage(component);
-
 	}
 
 	public static void sendChat(Player p, String chatMessage, ChatFormatting textColor) {
-
 		MutableComponent component = Component.literal(chatMessage);
 		component.setStyle(component.getStyle().withColor(textColor));
 		p.sendSystemMessage(component);
-
 	}
 
 	public static BlockPos getBlockPosition (Entity e) {
@@ -252,19 +282,105 @@ public class Utility {
 		return ret;
 	}
 	
-	public static void slowFlyingMotion(LivingEntity le) {
-
-		if ((le instanceof Player) && (le.isFallFlying())) {
-			Player cp = (Player) le;
-			Vec3 vec = cp.getDeltaMovement();
-			Vec3 slowedVec;
-			if (vec.y > 0) {
-				slowedVec = vec.multiply(0.17, -0.75, 0.17);
-			} else {
-				slowedVec = vec.multiply(0.17, 1.001, 0.17);
+	
+	public static void validateOmitBiomeConfig (ServerStartingEvent event) {
+		MinecraftServer server = event.getServer();
+		RegistryAccess dynreg = server.registryAccess();
+		Registry<Biome> biomeRegistry = dynreg.registryOrThrow(Registries.BIOME);
+		for(String omitkey: MyConfig.getOmittedLootBiome()) {
+			ResourceLocation key = new ResourceLocation(omitkey);
+			if (!biomeRegistry.containsKey(key)) {
+				LOGGER.error("LootControlUtility:  Bad Biome in Omit Biome Loot Configuration value (spelled wrong?) : " + omitkey);
 			}
-			cp.setDeltaMovement(slowedVec);
+			
+		}
+	}
+	
+	public static void generateBiomeReport(ServerStartingEvent event) {
+
+		PrintStream p = null;
+		try {
+			p = new PrintStream(new FileOutputStream("config/lootcontrolutility/Biomes.rpt", false));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		if (p == null) {
+			p = System.out;
+		}
+		int biomelineNumber = 0;
+		MinecraftServer server = event.getServer();
+		RegistryAccess dynreg = server.registryAccess();
+		Registry<Biome> biomeRegistry = dynreg.registryOrThrow(Registries.BIOME);
+
+		for (Biome b : biomeRegistry) {
+			String bn = biomeRegistry.getKey(b).toString();
+			Optional<Holder.Reference<Biome>> oBH = biomeRegistry.getHolder(biomeRegistry.getId(b));
+			p.println(bn);
+		}
+
+		if (p != System.out) {
+			p.close();
 		}
 	}
 
+	public static void generateBiomeTagReport(ServerStartingEvent event) {
+
+		PrintStream p = null;
+		try {
+			p = new PrintStream(new FileOutputStream("config/lootcontrolutility/BiomeTags.rpt", false));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		if (p == null) {
+			p = System.out;
+		}
+		int biomelineNumber = 0;
+		MinecraftServer server = event.getServer();
+		RegistryAccess dynreg = server.registryAccess();
+		Registry<Biome> biomeRegistry = dynreg.registryOrThrow(Registries.BIOME);
+		List<TagKey<Biome>> bt = biomeRegistry.getTagNames().toList();
+		for (TagKey<Biome> tag : bt) {
+			p.println(tag.toString());
+		}
+		biomeRegistry.getTagNames().forEach(p::println);
+
+		if (p != System.out) {
+			p.close();
+		}
+	}
+	
+	public static void generateLootingTableReports(ServerStartingEvent event) {
+		List<String> report = new ArrayList<String>();
+		
+		PrintStream p = null;
+		try {
+			p = new PrintStream(new FileOutputStream("config/lootcontrolutility/LootTables.rpt", false));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if (p == null) {
+			p = System.out;
+		}
+		
+		LootDataManager ldm = event.getServer().getLootData();
+		Collection<ResourceLocation> keys = ldm.getKeys(LootDataType.TABLE);
+		for (ResourceLocation k : keys) {
+			if (k.getPath().contains("chests")) {
+				report.add(k.toString());
+			}
+		}
+
+		Collections.sort(report);
+		for (String str : report) {
+				p.println(str);
+		}
+		
+		if (p != System.out) {
+			p.close();
+		}
+	
+	}
+	
 }

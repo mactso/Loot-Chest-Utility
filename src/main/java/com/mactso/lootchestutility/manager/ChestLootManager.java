@@ -38,6 +38,12 @@ public class ChestLootManager {
 	public static List<ChestLootItem> chestLootTable = new ArrayList<>();
 	public static boolean init = false;
 
+//  NOTICE:  This depends on the global_loot_modifiers.json and special.json files.	
+//  If it isn't being called at all, those files are probably missing or messed up.
+//  including possibly having the wrong mod id .
+	
+	
+	
 	public static void init(String[] lootItems) {
 
 		chestLootTable.clear();

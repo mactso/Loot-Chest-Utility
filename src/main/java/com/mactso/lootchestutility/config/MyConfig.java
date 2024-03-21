@@ -7,15 +7,14 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.mactso.lootchestutility.Main;
 import com.mactso.lootchestutility.manager.ChestLootManager;
 import com.mactso.lootchestutility.manager.LootManager;
 import com.mactso.lootchestutility.manager.LootTableListManager;
-import com.mactso.lootchestutility.Main;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.ForgeConfigSpec.BooleanValue;
 import net.minecraftforge.common.ForgeConfigSpec.ConfigValue;
-import net.minecraftforge.common.ForgeConfigSpec.DoubleValue;
 import net.minecraftforge.common.ForgeConfigSpec.IntValue;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -34,8 +33,12 @@ public class MyConfig {
 	private static List<? extends String> lootItemsList;
 	private static List<? extends String> bonusChestLootList;
 	private static List<? extends String> bonusLootTableList;
+	private static List<? extends String> omitLootBiomesList;
 	private static int bonusLootEnchantmentLevelModifier;
 	private static int      oddsDropExperienceBottle;
+	private static boolean usingCore = false;
+
+
 
 	static
 	{
@@ -54,6 +57,13 @@ public class MyConfig {
 		 debugLevel = newValue;
 	}
 
+	public static boolean isUsingCore() {
+		return usingCore;
+	}
+
+	public static void setUsingCore(boolean usingCore) {
+		MyConfig.usingCore = usingCore;
+	}
 	
 	public static int getLootBoostDistance() {
 		return lootBoostDistance;
@@ -66,7 +76,26 @@ public class MyConfig {
 	public static boolean isUseLootDrops() {
 		return useLootDrops;
 	}
+	
+	public static boolean isGenerateReports() {
+		return generateReports;
+	}
 
+	public static boolean isGeneratePotions() {
+		return generatePotions;
+	}
+	
+	public static boolean isOmittedLootBiome (String resourcelocation) {
+		if (omitLootBiomesList.contains(resourcelocation)) {
+			return true;
+		}
+		return false;
+	}
+
+	public static List<? extends String> getOmittedLootBiome() {
+		return omitLootBiomesList;
+	}
+	
 	public static void setUseLootDrops(boolean newValue) {
 		MyConfig.useLootDrops = newValue;
 		COMMON.useLootDrops.set(newValue);
@@ -85,8 +114,9 @@ public class MyConfig {
 		return oddsDropExperienceBottle;
 	}
 	private static int      debugLevel;
+	private static boolean generateReports;
+	private static boolean generatePotions;
 	private static int      lootBoostDistance;
-
 	private static boolean  useLootDrops;
 
 
@@ -104,10 +134,13 @@ public class MyConfig {
 
 	public static void pushValues() {
 		COMMON.debugLevel.set(debugLevel);
+		COMMON.generateReports.set(generateReports);
+		COMMON.generatePotions.set(generatePotions);
 		COMMON.lootBoostDistance.set(lootBoostDistance);
 		COMMON.useLootDrops.set(useLootDrops);
 		COMMON.lootItemsList.set(lootItemsList);
 		COMMON.bonusChestLootList.set(bonusChestLootList);
+		COMMON.omitLootBiomesList.set(omitLootBiomesList);
 		COMMON.bonusLootTableList.set(bonusLootTableList);
 		COMMON.bonusLootEnchantmentLevelModifier.set(bonusLootEnchantmentLevelModifier);
 		COMMON.oddsDropExperienceBottle.set(oddsDropExperienceBottle);
@@ -125,11 +158,14 @@ public class MyConfig {
 	public static void bakeConfig()
 	{
 		debugLevel = COMMON.debugLevel.get();
-		lootBoostDistance = COMMON.lootBoostDistance.get();
+		generateReports = COMMON.generateReports.get();
+		generatePotions = COMMON.generatePotions.get();
 
+		lootBoostDistance = COMMON.lootBoostDistance.get();
 		lootItemsList = COMMON.lootItemsList.get();
 		LootManager.init(extract(lootItemsList));
 		bonusChestLootList = COMMON.bonusChestLootList.get();
+		omitLootBiomesList = COMMON.omitLootBiomesList.get();
 		ChestLootManager.init(extract(bonusChestLootList));
 		bonusLootTableList = COMMON.bonusLootTableList.get();
 		LootTableListManager.init(extract(bonusLootTableList));
@@ -154,6 +190,9 @@ public class MyConfig {
 	public static class Common {
 
 		public final IntValue debugLevel;
+		
+		public final BooleanValue generateReports;
+		public final BooleanValue generatePotions;
 
 		public final IntValue oddsDropExperienceBottle;
 		
@@ -162,6 +201,7 @@ public class MyConfig {
 		public final ConfigValue<List<? extends String>> lootItemsList;
 		public final ConfigValue<List<? extends String>> bonusChestLootList; 
 		public final ConfigValue<List<? extends String>> bonusLootTableList; 
+		public final ConfigValue<List<? extends String>> omitLootBiomesList;
 		public final IntValue bonusLootEnchantmentLevelModifier;
 		
 		
@@ -309,6 +349,11 @@ public class MyConfig {
 					"minecraft:chests/ancient_city",
 					"minecraft:chests/ruined_portal"
 			);
+
+			List<String> defOmitLootBiomesList = Arrays.asList(
+					"minecraft:plains",
+					"birch_forest"
+			);
 			
 			builder.push("Harder Farther Control Values");
 			builder.push("Debug Settings");			
@@ -317,6 +362,16 @@ public class MyConfig {
 					.translation(Main.MODID + ".config." + "debugLevel")
 					.defineInRange("debugLevel", () -> 0, 0, 2);
 			builder.pop();
+
+			generateReports = builder
+					.comment("Generate LootingTableReport.txt")
+					.translation(Main.MODID + ".config." + "generateReports")
+					.define ("generateReports", () -> true);
+
+			generatePotions = builder
+					.comment("Generate Ogre and Life Saving Potions.txt")
+					.translation(Main.MODID + ".config." + "generatePotions")
+					.define ("generatePotions", () -> true);
 			
 			builder.push("Loot Settings");
 
@@ -341,8 +396,6 @@ public class MyConfig {
 					.translation(Main.MODID + ".config" + "lootItemsList")
 					.defineList("lootItemsList", defLootItemsList, Common::isString);
 			
-			
-			
 			bonusChestLootList = builder
 			.comment("Loot Items List")
 			.translation(Main.MODID + ".config" + "bonusChestLootList ")
@@ -350,10 +403,15 @@ public class MyConfig {
 
 			
 			bonusLootTableList = builder
-			.comment("List of Loot Tables (usually containers) that will get bonus loot based on distance")
+			.comment("List of Loot Tables (usually containers) that will get bonus loot.  (See the LootTables.rpt for a complete list of chest loot tables available to choose) but you can use any loot table.")
 			.translation(Main.MODID + ".config" + "bonusLootTableList ")
 			.defineList("bonusLootTableList ", defBonusLootTableList, Common::isString);
 
+			omitLootBiomesList = builder
+					.comment("List of Biomes which do not get bonus loot.")
+					.translation(Main.MODID + ".config" + "omitLootBiomesList")
+					.defineList("omitLootBiomesList", defOmitLootBiomesList, Common::isString);
+			
 			bonusLootEnchantmentLevelModifier = builder
 					.comment("Bonus Loot Enchantment Level Modifier")
 					.translation(Main.MODID + ".config." + "bonusLootEnchantmentLevelModifier")
